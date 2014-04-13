@@ -349,9 +349,28 @@ static void wpa_supplicant_optimize_freqs(
 		 */
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Scan only frequency %u MHz "
 			"that was used during provisioning", wpa_s->wps_freq);
-		params->freqs = os_zalloc(2 * sizeof(int));
-		if (params->freqs)
-			params->freqs[0] = wpa_s->wps_freq;
+
+#ifdef CONFIG_ANDROID_4_2_PERSISTENT_IOT
+		if( wpa_s->android_persistent_iot )
+		{
+			wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Add freq 2412 for IOT issue with "
+				"Android 4.2 platform ");
+			params->freqs = os_zalloc(3 * sizeof(int));
+			if (params->freqs)
+			{
+				params->freqs[0] = 2412;
+				params->freqs[1] = wpa_s->wps_freq;
+			}
+		}
+		else
+		{
+#endif //CONFIG_ANDROID_4_2_PERSISTENT_IOT
+			params->freqs = os_zalloc(2 * sizeof(int));
+			if (params->freqs)
+				params->freqs[0] = wpa_s->wps_freq;
+#ifdef CONFIG_ANDROID_4_2_PERSISTENT_IOT
+		}
+#endif //CONFIG_ANDROID_4_2_PERSISTENT_IOT
 		wpa_s->after_wps--;
 	}
 
