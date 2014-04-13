@@ -474,6 +474,14 @@ struct p2p_message {
 	struct wpabuf *wps_attributes;
 	struct wpabuf *wfd_subelems;
 
+#ifdef CONFIG_WFD
+	u8 wfd_enable;
+	struct wpabuf *wfd_attributes;
+	u8 session_avail;
+	u16 rtsp_ctrlport;
+	u8 wfd_device_type;
+#endif //CONFIG_WFD
+
 	u8 dialog_token;
 
 	const u8 *capability;
