@@ -221,6 +221,14 @@ struct p2p_peer_info {
 	 * wfd_subelems - Wi-Fi Display subelements from WFD IE(s)
 	 */
 	struct wpabuf *wfd_subelems;
+	
+#ifdef CONFIG_WFD
+	u8							wfd_enable;
+	u8							session_avail;
+	u16							rtsp_ctrlport;
+	u8							wfd_device_type;
+#endif //CONFIG_WFD
+
 };
 
 enum p2p_prov_disc_status {
