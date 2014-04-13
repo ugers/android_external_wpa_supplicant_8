@@ -1227,6 +1227,15 @@ int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s)
 							    timeout_usec);
 				return 0;
 			}
+			
+			/* RTK patched: set the same timeout as in provisioning */
+			if (wpa_s->after_wps) {
+				timeout_sec = 0;
+				timeout_usec = 250000;
+				wpa_supplicant_req_new_scan(wpa_s, timeout_sec,
+							    timeout_usec);
+				return 0;
+			}
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_INTERWORKING
 			if (wpa_s->conf->auto_interworking &&
