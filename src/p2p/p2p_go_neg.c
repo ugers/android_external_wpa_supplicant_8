@@ -13,7 +13,9 @@
 #include "wps/wps_defs.h"
 #include "p2p_i.h"
 #include "p2p.h"
-
+#ifdef CONFIG_WFD
+#include "../../wpa_supplicant/wpa_supplicant_i.h"
+#endif //CONFIG_WFD
 
 static int p2p_go_det(u8 own_intent, u8 peer_value)
 {
@@ -135,7 +137,8 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	u8 *len;
 	u8 group_capab;
 	size_t extra = 0;
-
+	static u8 diatkn_inc = 0;
+	
 #ifdef CONFIG_WIFI_DISPLAY
 	if (p2p->wfd_ie_go_neg)
 		extra = wpabuf_len(p2p->wfd_ie_go_neg);
@@ -145,6 +148,7 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	if (buf == NULL)
 		return NULL;
 
+	if  (!(diatkn_inc++ % 2))
 	peer->dialog_token++;
 	if (peer->dialog_token == 0)
 		peer->dialog_token = 1;
@@ -164,8 +168,13 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	p2p_buf_add_capability(buf, p2p->dev_capab &
 			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY,
 			       group_capab);
+			       
+#ifdef CONFIG_CLEAR_TIE_BREAKER 
+	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) & 0xFE);
+#else
 	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) |
 			      p2p->next_tie_breaker);
+#endif
 	p2p->next_tie_breaker = !p2p->next_tie_breaker;
 	p2p_buf_add_config_timeout(buf, p2p->go_timeout, p2p->client_timeout);
 	p2p_buf_add_listen_channel(buf, p2p->cfg->country, p2p->cfg->reg_class,
@@ -235,7 +244,7 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 	dev->connect_reqs++;
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
-			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
+			    wpabuf_head(req), wpabuf_len(req), 1000) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		/* Use P2P find to recover and retry */
@@ -414,6 +423,9 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 	u8 status = P2P_SC_FAIL_INVALID_PARAMS;
 	int tie_breaker = 0;
 	int freq;
+#ifdef CONFIG_WFD
+	struct wpa_supplicant *wpa_s = (struct wpa_supplicant *)p2p->cfg->cb_ctx;
+#endif //CONFIG_WFD
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Received GO Negotiation Request from " MACSTR
@@ -421,6 +433,13 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 
 	if (p2p_parse(data, len, &msg))
 		return;
+
+#ifdef CONFIG_WFD
+	wpa_s->wfd_enable = msg.wfd_enable;
+	wpa_s->session_avail = msg.session_avail;
+	wpa_s->rtsp_ctrlport = msg.rtsp_ctrlport;
+	wpa_s->wfd_device_type = msg.wfd_device_type;
+#endif //CONFIG_WFD
 
 	if (!msg.capability) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
@@ -496,9 +515,15 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (dev == NULL)
+    {
+		wpa_printf(MSG_INFO, "%s, call p2p_add_dev_from_go_neg_req\n", __func__);
 		dev = p2p_add_dev_from_go_neg_req(p2p, sa, &msg);
-	else if (dev->flags & P2P_DEV_PROBE_REQ_ONLY)
+    }
+	else /*if (dev->flags & P2P_DEV_PROBE_REQ_ONLY)*/
+    {
+		wpa_printf(MSG_INFO, "%s to p2p_add_dev_info\n", __func__);
 		p2p_add_dev_info(p2p, sa, dev, &msg);
+    }
 	if (dev && dev->flags & P2P_DEV_USER_REJECTED) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: User has rejected this peer");
