@@ -859,6 +859,17 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "p2p_intra_bss=%u\n", config->p2p_intra_bss);
 	if (config->p2p_group_idle)
 		fprintf(f, "p2p_group_idle=%u\n", config->p2p_group_idle);
+		
+#ifdef CONFIG_WFD
+	if (config->wfd_tcpport)
+		fprintf(f, "wfd_tcpport=%u\n", config->wfd_tcpport);
+	if (config->wfd_max_throughput)
+		fprintf(f, "wfd_max_throughput=%u\n", config->wfd_max_throughput);
+	if (config->wfd_device_type)
+		fprintf(f, "wfd_device_type=%u\n", config->wfd_device_type);
+#endif
+
+
 	if (config->p2p_pref_chan) {
 		unsigned int i;
 		fprintf(f, "p2p_pref_chan=");
