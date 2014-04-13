@@ -2568,11 +2568,18 @@ broken_combination:
 		}
 	}
 
+#ifndef REALTEK_WIFI_VENDOR
 	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK]) {
-		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based "
+		wpa_printf(MSG_INFO, "nl80211: Using driver-based "
 			   "off-channel TX");
 		capa->flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_TX;
 	}
+#endif
+
+#ifdef REALTEK_WIFI_VENDOR
+        wpa_printf(MSG_INFO, "nl80211: no Using driver-based "
+			   "off-channel TX");
+#endif
 
 	if (tb[NL80211_ATTR_ROAM_SUPPORT]) {
 		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based roaming");
@@ -2624,7 +2631,7 @@ broken_combination:
 		}
 	}
 
-#ifndef NO_APSME_ATTR
+#ifndef REALTEK_WIFI_VENDOR
 	if (tb[NL80211_ATTR_DEVICE_AP_SME])
 #endif
 		info->device_ap_sme = 1;
@@ -2719,10 +2726,10 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->poll_command_supported = info.poll_command_supported;
 	drv->data_tx_status = info.data_tx_status;
 
-#if defined(ANDROID_P2P) && !defined(LEGACY_STA_EVENTS)
+#ifdef ANDROID_P2P
 	if(drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) {
 		/* Driver is new enough to support monitorless mode*/
-		wpa_printf(MSG_DEBUG, "nl80211: Driver is new "
+		wpa_printf(MSG_INFO, "nl80211: Driver is new "
 			  "enough to support monitor-less mode");
 		drv->use_monitor = 0;
 	}
@@ -2760,7 +2767,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 }
 
 
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 static int android_genl_ctrl_resolve(struct nl_handle *handle,
 				     const char *name)
 {
@@ -6467,7 +6474,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	int res;
 	int qos = flags & WPA_STA_WMM;
 
-#if defined (LEGACY_STA_EVENTS) || !defined (ANDROID_P2P)
+#ifndef ANDROID_P2P
 	if (drv->device_ap_sme || !drv->use_monitor)
 #else
 	if (drv->device_ap_sme && !drv->use_monitor)
@@ -8959,6 +8966,23 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 	nla_nest_end(msg, replay_nested);
 
 	send_and_recv_msgs(drv, msg, NULL, NULL);
+	//RTK GTK offload
+	{
+		u8 buf[256];
+		u8 *ptr=NULL;
+		int i;
+		memset(buf, 0x33, 256);
+		ptr = buf;
+		strcpy(ptr, "GTK_REKEY_OFFLOAD");
+		ptr += strlen("GTK_REKEY_OFFLOAD")+1;
+		memcpy(ptr, kek, NL80211_KEK_LEN);
+		ptr += NL80211_KEK_LEN;
+		memcpy(ptr, kck, NL80211_KCK_LEN);
+		ptr += NL80211_KCK_LEN;
+		memcpy(ptr, replay_ctr, NL80211_REPLAY_CTR_LEN);
+
+		wpa_driver_nl80211_driver_cmd(priv,  "GTK_REKEY_OFFLOAD", buf, NL80211_KEK_LEN+NL80211_KCK_LEN+NL80211_REPLAY_CTR_LEN+strlen("GTK_REKEY_OFFLOAD")+1);
+	}
 	return;
  nla_put_failure:
 	nlmsg_free(msg);
