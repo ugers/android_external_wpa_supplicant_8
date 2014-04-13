@@ -209,6 +209,8 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 					      wpa_s->pending_action_src);
 		wpa_s->action_tx_wait_time = wait_time;
 
+		wpa_printf(MSG_INFO, "%s, freq=%d, WPA_DRIVER_FLAGS_OFFCHANNEL_TX", __func__, freq);
+
 		return wpa_drv_send_action(
 			iface, wpa_s->pending_action_freq,
 			wait_time, wpa_s->pending_action_dst,
@@ -248,7 +250,7 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 		return 0;
 	}
 
-	wpa_printf(MSG_DEBUG, "Off-channel: Schedule Action frame to be "
+	wpa_printf(MSG_INFO, "Off-channel: Schedule Action frame to be "
 		   "transmitted once the driver gets to the requested "
 		   "channel");
 	if (wait_time > wpa_s->max_remain_on_chan)
