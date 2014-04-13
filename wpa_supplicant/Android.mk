@@ -46,6 +46,12 @@ ifeq ($(BOARD_LEGACY_NL80211_STA_EVENTS),true)
 L_CFLAGS += -DLEGACY_STA_EVENTS
 endif
 
+ifeq ($(BOARD_WIFI_VENDOR), realtek)
+L_CFLAGS += -DREALTEK_WIFI_VENDOR
+L_CFLAGS += -DANDROID_P2P
+L_CFLAGS += -DCONFIG_ANDROID_4_2_PERSISTENT_IOT
+endif
+
 # Use Android specific directory for control interface sockets
 L_CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
 L_CFLAGS += -DCONFIG_CTRL_IFACE_DIR=\"/data/system/wpa_supplicant\"
@@ -260,12 +266,20 @@ CONFIG_AP=y
 ifdef CONFIG_P2P_STRICT
 L_CFLAGS += -DCONFIG_P2P_STRICT
 endif
+ifdef CONFIG_WFD
+ifndef CONFIG_WIFI_DISPLAY
+L_CFLAGS += -DCONFIG_WFD
+endif
+endif
 endif
 
 ifdef CONFIG_WIFI_DISPLAY
 L_CFLAGS += -DCONFIG_WIFI_DISPLAY
 OBJS += wifi_display.c
 endif
+
+ifdef CONFIG_CLEAR_TIE_BREAKER
+CFLAGS += -DCONFIG_CLEAR_TIE_BREAKER
 
 ifdef CONFIG_HS20
 OBJS += hs20_supplicant.c
