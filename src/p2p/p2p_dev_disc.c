@@ -20,11 +20,13 @@ static struct wpabuf * p2p_build_dev_disc_req(struct p2p_data *p2p,
 {
 	struct wpabuf *buf;
 	u8 *len;
+	static u8 diatkn_inc = 0;
 
 	buf = wpabuf_alloc(100);
 	if (buf == NULL)
 		return NULL;
 
+	if  (!(diatkn_inc++ % 2))
 	go->dialog_token++;
 	if (go->dialog_token == 0)
 		go->dialog_token = 1;
