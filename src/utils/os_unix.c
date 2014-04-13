@@ -13,7 +13,9 @@
 #ifdef ANDROID
 #include <linux/capability.h>
 #include <linux/prctl.h>
+#if !defined(PURE_LINUX)
 #include <private/android_filesystem_config.h>
+#endif /* !defined(PURE_LINUX) */
 #endif /* ANDROID */
 
 #include "os.h"
@@ -252,7 +254,7 @@ char * os_rel2abs_path(const char *rel_path)
 
 int os_program_init(void)
 {
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 	/*
 	 * We ignore errors here since errors are normal if we
 	 * are already running as non-root.
