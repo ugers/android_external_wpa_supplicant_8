@@ -458,7 +458,7 @@ struct wpa_ssid {
 	 */
 	int export_keys;
 
-#if defined(ANDROID_P2P) && !defined(LEGACY_STA_EVENTS)
+#ifdef ANDROID_P2P
 	/**
 	 * assoc_retry - Number of times association should be retried.
 	 */
