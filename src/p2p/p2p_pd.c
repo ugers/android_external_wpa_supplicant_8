@@ -13,7 +13,9 @@
 #include "wps/wps_defs.h"
 #include "p2p_i.h"
 #include "p2p.h"
-
+#ifdef CONFIG_WFD
+#include "../../wpa_supplicant/wpa_supplicant_i.h"
+#endif //CONFIG_WFD
 
 /*
  * Number of retries to attempt for provision discovery requests
@@ -137,9 +139,19 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	int freq;
 	int reject = 1;
 	struct wpabuf *resp;
+#ifdef CONFIG_WFD
+	struct wpa_supplicant *wpa_s = (struct wpa_supplicant *)p2p->cfg->cb_ctx;
+#endif //CONFIG_WFD
 
 	if (p2p_parse(data, len, &msg))
 		return;
+
+#ifdef CONFIG_WFD
+	wpa_s->wfd_enable = msg.wfd_enable;
+	wpa_s->session_avail = msg.session_avail;
+	wpa_s->rtsp_ctrlport = msg.rtsp_ctrlport;
+	wpa_s->wfd_device_type = msg.wfd_device_type;
+#endif //CONFIG_WFD
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Received Provision Discovery Request from " MACSTR
