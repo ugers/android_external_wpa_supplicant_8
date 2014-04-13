@@ -747,6 +747,11 @@ struct wpa_config {
 	 *     matching network block
 	 */
 	int auto_interworking;
+#ifdef CONFIG_WFD
+	int wfd_tcpport;
+	int wfd_max_throughput;
+	int wfd_device_type;
+#endif
 };
 
 
