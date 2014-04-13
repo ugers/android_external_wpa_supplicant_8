@@ -3000,6 +3000,11 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(p2p_intra_bss, 0, 1), CFG_CHANGED_P2P_INTRA_BSS },
 	{ INT(p2p_group_idle), 0 },
 	{ FUNC(p2p_pref_chan), CFG_CHANGED_P2P_PREF_CHAN },
+#ifdef CONFIG_WFD
+	{ INT(wfd_tcpport), 554 },
+	{ INT(wfd_max_throughput), 300 },
+	{ INT(wfd_device_type), 1 },
+#endif
 #endif /* CONFIG_P2P */
 	{ FUNC(country), CFG_CHANGED_COUNTRY },
 	{ INT(bss_max_count), 0 },
