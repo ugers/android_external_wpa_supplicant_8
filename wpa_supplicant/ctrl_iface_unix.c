@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <fcntl.h>
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 #include <cutils/sockets.h>
 #endif /* ANDROID */
 
@@ -300,7 +300,7 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 	buf = os_strdup(wpa_s->conf->ctrl_interface);
 	if (buf == NULL)
 		goto fail;
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 	os_snprintf(addr.sun_path, sizeof(addr.sun_path), "wpa_%s",
 		    wpa_s->conf->ctrl_interface);
 	priv->sock = android_get_control_socket(addr.sun_path);
@@ -429,7 +429,7 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 	}
 	os_free(fname);
 
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 havesock:
 #endif /* ANDROID */
 
@@ -685,7 +685,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 	if (global->params.ctrl_interface == NULL)
 		return priv;
 
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 	priv->sock = android_get_control_socket(global->params.ctrl_interface);
 	if (priv->sock >= 0)
 		goto havesock;
@@ -740,7 +740,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 		}
 	}
 
-#ifdef ANDROID
+#if defined(ANDROID) && !defined(PURE_LINUX)
 havesock:
 #endif /* ANDROID */
 	eloop_register_read_sock(priv->sock,
