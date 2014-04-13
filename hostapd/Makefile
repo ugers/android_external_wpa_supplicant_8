@@ -6,8 +6,17 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
+PURE_LINUX = y
+ifeq ($(PURE_LINUX), y)
+CFLAGS += -DPURE_LINUX
+endif
+
+CFLAGS += -I../wpa_supplicant
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
+CFLAGS += -I../src/drivers
+
+CFLAGS += -DANDROID -DANDROID_P2P -DREALTEK_WIFI_VENDOR
 
 # Uncomment following line and set the path to your kernel tree include
 # directory if your C library does not include all header files.
