@@ -32,10 +32,12 @@ endif
 ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)
 L_CFLAGS += -DANDROID_P2P
 L_CFLAGS += -DP2P_CONCURRENT_SEARCH_DELAY=0
+L_CFLAGS += -DANDROID_BCMDHD_VENDOR
 endif
 
-ifeq ($(BOARD_NO_APSME_ATTR),true)
-L_CFLAGS += -DNO_APSME_ATTR
+ifeq ($(BOARD_WIFI_VENDOR), realtek)
+L_CFLAGS += -DREALTEK_WIFI_VENDOR
+L_CFLAGS += -DANDROID_P2P
 endif
 
 ifeq ($(BOARD_WLAN_DEVICE), qcwcn)
@@ -44,10 +46,6 @@ endif
 
 ifeq ($(BOARD_WLAN_DEVICE), mrvl)
 L_CFLAGS += -DANDROID_P2P
-endif
-
-ifeq ($(BOARD_LEGACY_NL80211_STA_EVENTS),true)
-L_CFLAGS += -DLEGACY_STA_EVENTS
 endif
 
 # Use Android specific directory for control interface sockets
@@ -515,7 +513,7 @@ endif
 ifdef CONFIG_EAP_PROXY
 L_CFLAGS += -DCONFIG_EAP_PROXY
 OBJS += src/eap_peer/eap_proxy_$(CONFIG_EAP_PROXY).c
-include $(LOCAL_PATH)/eap_proxy_$(CONFIG_EAP_PROXY).mk
+include eap_proxy_$(CONFIG_EAP_PROXY).mk
 CONFIG_IEEE8021X_EAPOL=y
 endif
 
@@ -1560,10 +1558,6 @@ ifneq ($(BOARD_WPA_SUPPLICANT_PRIVATE_LIB),)
 LOCAL_STATIC_LIBRARIES += $(BOARD_WPA_SUPPLICANT_PRIVATE_LIB)
 endif
 LOCAL_SHARED_LIBRARIES := libc libcutils liblog
-ifdef CONFIG_EAP_PROXY
-LOCAL_STATIC_LIBRARIES += $(LIB_STATIC_EAP_PROXY)
-LOCAL_SHARED_LIBRARIES += $(LIB_SHARED_EAP_PROXY)
-endif
 ifeq ($(CONFIG_TLS), openssl)
 LOCAL_SHARED_LIBRARIES += libcrypto libssl libkeystore_binder
 endif

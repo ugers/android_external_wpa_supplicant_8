@@ -28,12 +28,8 @@ ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)
 L_CFLAGS += -DANDROID_P2P
 endif
 
-ifeq ($(BOARD_LEGACY_NL80211_STA_EVENTS),true)
-L_CFLAGS += -DLEGACY_STA_EVENTS
-endif
-
-ifeq ($(BOARD_NO_APSME_ATTR),true)
-L_CFLAGS += -DNO_APSME_ATTR
+ifeq ($(BOARD_WIFI_VENDOR), realtek)
+L_CFLAGS += -DANDROID_P2P
 endif
 
 ifeq ($(BOARD_WLAN_DEVICE), qcwcn)
@@ -42,10 +38,6 @@ endif
 
 ifeq ($(BOARD_WLAN_DEVICE), mrvl)
 L_CFLAGS += -DANDROID_P2P
-endif
-
-ifeq ($(BOARD_WIFI_SKIP_CAPABILITIES), true)
-L_CFLAGS += -DBOARD_WIFI_SKIP_CAPABILITIES
 endif
 
 # Use Android specific directory for control interface sockets

@@ -70,8 +70,6 @@ int p2p_connection_in_progress(struct p2p_data *p2p)
 			wpa_printf(MSG_DEBUG, "p2p_connection_in_progress state %d", p2p->state);
 			ret = 0;
 	}
-	if (p2p->pending_action_state == P2P_PENDING_PD)
-		ret = 1;
 
 	return ret;
 }
@@ -87,15 +85,6 @@ static void p2p_expire_peers(struct p2p_data *p2p)
 	dl_list_for_each_safe(dev, n, &p2p->devices, struct p2p_device, list) {
 		if (dev->last_seen.sec + P2P_PEER_EXPIRATION_AGE >= now.sec)
 			continue;
-
-		if (dev == p2p->go_neg_peer) {
-			/*
-			 * GO Negotiation is in progress with the peer, so
-			 * don't expire the peer entry until GO Negotiation
-			 * fails or times out.
-			 */
-			continue;
-		}
 
 		if (p2p->cfg->go_connected &&
 		    p2p->cfg->go_connected(p2p->cfg->cb_ctx,
@@ -750,7 +739,21 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 			freq, msg.ds_params ? *msg.ds_params : -1);
 	}
 	if (scan_res) {
+#ifdef REALTEK_WIFI_VENDOR
+		if (dev->listen_freq) {
+			if (freq == 2412 || freq == 2437 || freq == 2462) {
+				dev->listen_freq = freq;
+				wpa_printf(MSG_INFO, "%s, listen_freq=%d", __func__, dev->listen_freq);
+			} else {
+				wpa_printf(MSG_INFO, "%s, freq(%d) is not 1,6,11, don't update to listen_freq", __func__, freq);
+			}
+		} else {
+			wpa_printf(MSG_INFO, "%s, freq -> listen_freq=%d", __func__, freq);
+			dev->listen_freq = freq;
+		}
+#else
 		dev->listen_freq = freq;
+#endif
 		if (msg.group_info)
 			dev->oper_freq = freq;
 	}
@@ -1137,13 +1140,27 @@ int p2p_search_pending(struct p2p_data *p2p)
 
 int p2p_other_scan_completed(struct p2p_data *p2p)
 {
+#ifdef ANDROID_BCMDHD_VENDOR
+	static int first = 1;
+#endif
+
 	if (p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY) {
 		p2p_set_state(p2p, P2P_SEARCH);
 		p2p_search(p2p);
 		return 1;
 	}
+
+#ifdef ANDROID_BCMDHD_VENDOR
+	if (p2p->state != P2P_SEARCH_WHEN_READY || first == 1) {
+		printf("magic: bcmdhd don't wait previous p2p scan completed.");
+		first = 0;
+		return 0;
+	}
+#else
 	if (p2p->state != P2P_SEARCH_WHEN_READY)
 		return 0;
+#endif
+
 	p2p_dbg(p2p, "Starting pending P2P find now that previous scan was completed");
 	if (p2p_find(p2p, p2p->last_p2p_find_timeout, p2p->find_type,
 		     p2p->num_req_dev_types, p2p->req_dev_types,
@@ -3250,13 +3267,13 @@ static void p2p_timeout_connect_listen(struct p2p_data *p2p)
 
 static void p2p_timeout_wait_peer_connect(struct p2p_data *p2p)
 {
+	/*
+	 * TODO: could remain constantly in Listen state for some time if there
+	 * are no other concurrent uses for the radio. For now, go to listen
+	 * state once per second to give other uses a chance to use the radio.
+	 */
 	p2p_set_state(p2p, P2P_WAIT_PEER_IDLE);
-
-	if (p2p->cfg->is_concurrent_session_active &&
-	    p2p->cfg->is_concurrent_session_active(p2p->cfg->cb_ctx))
-		p2p_set_timeout(p2p, 0, 500000);
-	else
-		p2p_set_timeout(p2p, 0, 200000);
+	p2p_set_timeout(p2p, 0, 500000);
 }
 
 
@@ -3372,8 +3389,7 @@ static void p2p_timeout_invite_listen(struct p2p_data *p2p)
 			if (p2p->cfg->invitation_result)
 				p2p->cfg->invitation_result(
 					p2p->cfg->cb_ctx, -1, NULL, NULL,
-					p2p->invite_peer->info.p2p_device_addr,
-					0, 0);
+					p2p->invite_peer->info.p2p_device_addr);
 		}
 		p2p_set_state(p2p, P2P_IDLE);
 	}
@@ -3873,15 +3889,6 @@ static void p2p_ext_listen_timeout(void *eloop_ctx, void *timeout_ctx)
 		eloop_register_timeout(p2p->ext_listen_interval_sec,
 				       p2p->ext_listen_interval_usec,
 				       p2p_ext_listen_timeout, p2p, NULL);
-	}
-
-	if ((p2p->cfg->is_p2p_in_progress &&
-	     p2p->cfg->is_p2p_in_progress(p2p->cfg->cb_ctx)) ||
-	    (p2p->pending_action_state == P2P_PENDING_PD &&
-	     p2p->pd_retries > 0)) {
-		p2p_dbg(p2p, "Operation in progress - skip Extended Listen timeout (%s)",
-			p2p_state_txt(p2p->state));
-		return;
 	}
 
 	if (p2p->state == P2P_LISTEN_ONLY && p2p->ext_listen_only) {

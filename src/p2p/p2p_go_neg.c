@@ -418,7 +418,13 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 
 	/* Prefer a 5 GHz channel */
 	for (i = 0; i < intersection->reg_classes; i++) {
+#ifdef ANDROID_P2P
+		struct p2p_reg_class prc;
+		struct p2p_reg_class *c = &prc;
+		p2p_copy_reg_class(c, &intersection->reg_class[i]);
+#else
 		struct p2p_reg_class *c = &intersection->reg_class[i];
+#endif
 		if ((c->reg_class == 115 || c->reg_class == 124) &&
 		    c->channels) {
 			unsigned int r;
@@ -585,20 +591,17 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 		goto fail;
 	}
 
-	if (dev == NULL)
+	if (dev == NULL) {
+		wpa_printf(MSG_INFO, "%s, call p2p_add_dev_from_go_neg_req\n", __func__);
 		dev = p2p_add_dev_from_go_neg_req(p2p, sa, &msg);
-	else if ((dev->flags & P2P_DEV_PROBE_REQ_ONLY) ||
-		  !(dev->flags & P2P_DEV_REPORTED))
-		p2p_add_dev_info(p2p, sa, dev, &msg);
-	else if (!dev->listen_freq && !dev->oper_freq) {
-		/*
-		 * This may happen if the peer entry was added based on PD
-		 * Request and no Probe Request/Response frame has been received
-		 * from this peer (or that information has timed out).
-		 */
-		p2p_dbg(p2p, "Update peer " MACSTR
-			" based on GO Neg Req since listen/oper freq not known",
-			MAC2STR(dev->info.p2p_device_addr));
+	}
+#ifndef REALTEK_WIFI_VENDOR
+	else if (dev->flags & P2P_DEV_PROBE_REQ_ONLY)
+#else
+	else
+#endif
+	{
+		wpa_printf(MSG_INFO, "%s to p2p_add_dev_info\n", __func__);
 		p2p_add_dev_info(p2p, sa, dev, &msg);
 	}
 
@@ -1090,7 +1093,6 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_CONFIRM;
-	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 
 	if (msg.dialog_token != dev->dialog_token) {
 		p2p_dbg(p2p, "Unexpected Dialog Token %u (expected %u)",

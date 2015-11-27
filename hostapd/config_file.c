@@ -1169,9 +1169,13 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 
 #ifdef CONFIG_IEEE80211N
 	if (conf->ieee80211n && conf->hw_mode == HOSTAPD_MODE_IEEE80211B) {
+#ifdef REALTEK_WIFI_VENDOR
+		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
+#else
 		bss->disable_11n = 1;
 		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) in 11b mode is not "
 			   "allowed, disabling HT capabilites");
+#endif
 	}
 
 	if (conf->ieee80211n &&

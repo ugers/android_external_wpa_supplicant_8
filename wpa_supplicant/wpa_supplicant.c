@@ -459,9 +459,6 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;
 
-	os_free(wpa_s->manual_scan_freqs);
-	wpa_s->manual_scan_freqs = NULL;
-
 	gas_query_deinit(wpa_s->gas);
 	wpa_s->gas = NULL;
 
@@ -653,6 +650,12 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 	wpa_dbg(wpa_s, MSG_DEBUG, "State: %s -> %s",
 		wpa_supplicant_state_txt(wpa_s->wpa_state),
 		wpa_supplicant_state_txt(state));
+
+#ifdef ANDROID_P2P
+	if(state == WPA_ASSOCIATED && wpa_s->current_ssid) {
+		wpa_s->current_ssid->assoc_retry = 0;
+	}
+#endif /* ANDROID_P2P */
 
 	if (state != WPA_SCANNING)
 		wpa_supplicant_notify_scanning(wpa_s, 0);
@@ -1276,6 +1279,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int wep_keys_set = 0;
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
+	u8 ext_capab[10];
+	int ext_capab_len;
 #ifdef CONFIG_HT_OVERRIDES
 	struct ieee80211_ht_capabilities htcaps;
 	struct ieee80211_ht_capabilities htcaps_mask;
@@ -1490,27 +1495,15 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_HS20 */
 
-	/*
-	 * Workaround: Add Extended Capabilities element only if the AP
-	 * included this element in Beacon/Probe Response frames. Some older
-	 * APs seem to have interoperability issues if this element is
-	 * included, so while the standard may require us to include the
-	 * element in all cases, it is justifiable to skip it to avoid
-	 * interoperability issues.
-	 */
-	if (!bss || wpa_bss_get_ie(bss, WLAN_EID_EXT_CAPAB)) {
-		u8 ext_capab[10];
-		int ext_capab_len;
-		ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab);
-		if (ext_capab_len > 0) {
-			u8 *pos = wpa_ie;
-			if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
-				pos += 2 + pos[1];
-			os_memmove(pos + ext_capab_len, pos,
-				   wpa_ie_len - (pos - wpa_ie));
-			wpa_ie_len += ext_capab_len;
-			os_memcpy(pos, ext_capab, ext_capab_len);
-		}
+	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab);
+	if (ext_capab_len > 0) {
+		u8 *pos = wpa_ie;
+		if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
+			pos += 2 + pos[1];
+		os_memmove(pos + ext_capab_len, pos,
+			   wpa_ie_len - (pos - wpa_ie));
+		wpa_ie_len += ext_capab_len;
+		os_memcpy(pos, ext_capab, ext_capab_len);
 	}
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
@@ -1807,7 +1800,7 @@ static void wpa_supplicant_enable_one_network(struct wpa_supplicant *wpa_s,
 	 * Try to reassociate since there is no current configuration and a new
 	 * network was made available.
 	 */
-	if (!wpa_s->current_ssid && !wpa_s->disconnected)
+	if (!wpa_s->current_ssid)
 		wpa_s->reassociate = 1;
 }
 
@@ -1828,7 +1821,7 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 	} else
 		wpa_supplicant_enable_one_network(wpa_s, ssid);
 
-	if (wpa_s->reassociate && !wpa_s->disconnected) {
+	if (wpa_s->reassociate) {
 		if (wpa_s->sched_scanning) {
 			wpa_printf(MSG_DEBUG, "Stop ongoing sched_scan to add "
 				   "new network to scan filters");
@@ -3073,8 +3066,7 @@ next_driver:
 #ifdef CONFIG_EAP_PROXY
 {
 	size_t len;
-	wpa_s->mnc_len = eapol_sm_get_eap_proxy_imsi(wpa_s->eapol, wpa_s->imsi,
-						     &len);
+	wpa_s->mnc_len = eap_proxy_get_imsi(wpa_s->imsi, &len);
 	if (wpa_s->mnc_len > 0) {
 		wpa_s->imsi[len] = '\0';
 		wpa_printf(MSG_DEBUG, "eap_proxy: IMSI %s (MNC length %d)",
@@ -3510,8 +3502,7 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	os_free(global->params.override_driver);
 	os_free(global->params.override_ctrl_interface);
 
-	os_free(global->p2p_disallow_freq.range);
-	os_free(global->p2p_go_avoid_freq.range);
+	os_free(global->p2p_disallow_freq);
 	os_free(global->add_psk);
 
 	os_free(global);

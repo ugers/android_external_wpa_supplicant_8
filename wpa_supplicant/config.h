@@ -150,19 +150,12 @@ struct wpa_cred {
 	char *milenage;
 
 	/**
-	 * domain - Home service provider FQDN(s)
+	 * domain - Home service provider FQDN
 	 *
 	 * This is used to compare against the Domain Name List to figure out
-	 * whether the AP is operated by the Home SP. Multiple domain entries
-	 * can be used to configure alternative FQDNs that will be considered
-	 * home networks.
+	 * whether the AP is operated by the Home SP.
 	 */
-	char **domain;
-
-	/**
-	 * num_domain - Number of FQDNs in the domain array
-	 */
-	size_t num_domain;
+	char *domain;
 
 	/**
 	 * roaming_consortium - Roaming Consortium OI
@@ -210,14 +203,6 @@ struct wpa_cred {
 		size_t ssid_len;
 	} *excluded_ssid;
 	size_t num_excluded_ssid;
-
-	/**
-	 * sim_num - User selected SIM identifier
-	 *
-	 * This variable is used for identifying which SIM is used if the system
-	 * has more than one.
-	 */
-	int sim_num;
 };
 
 
@@ -891,17 +876,6 @@ struct wpa_config {
 	 * sched_scan_interval -  schedule scan interval
 	 */
 	unsigned int sched_scan_interval;
-
-	/**
-	 * tdls_external_control - External control for TDLS setup requests
-	 *
-	 * Enable TDLS mode where external programs are given the control
-	 * to specify the TDLS link to get established to the driver. The
-	 * driver requests the TDLS setup to the supplicant only for the
-	 * specified TDLS peers.
-	 *
-	 */
-	int tdls_external_control;
 };
 
 
